@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>돼지쌤네 학교 한국사</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root { --primary: #FF9800; --dark: #3E2723; --bg: #fdf6e3; --white: #ffffff; --error: #F44336; --success: #4CAF50; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: var(--bg); font-family: 'Pretendard', sans-serif; overflow: hidden; }
+        .app-container { width: 95%; max-width: 400px; margin: 3vh auto; height: 94vh; background: var(--white); border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: var(--primary); color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .content { flex: 1; padding: 15px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .hidden { display: none !important; }
+        button { width: 100%; padding: 12px; border: none; border-radius: 10px; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-bottom: 8px; }
+        .btn-main { background: var(--primary); color: white; box-shadow: 0 3px 0 #e68a00; }
+        .btn-wrong { background: var(--error); color: white; box-shadow: 0 3px 0 #d32f2f; }
+        .btn-choice { background: #ffffff; border: 1.5px solid #eee; text-align: left; color: var(--dark); padding: 12px; }
+        .score-board { background: #fff3e0; border: 2px dashed var(--primary); border-radius: 15px; padding: 15px; text-align: center; margin-bottom: 15px; }
+        .score-text { font-size: 1.2rem; font-weight: 800; color: var(--dark); margin: 5px 0; }
+        .explanation-box { background: #e3f2fd; padding: 15px; border-radius: 10px; border-left: 5px solid #2196F3; font-size: 0.88rem; line-height: 1.6; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <div class="header">
+            <h2 style="margin:0; font-size:1rem;">🐷 돼지쌤네 학교 한국사</h2>
+            <button onclick="goHome()" style="width:auto; padding:4px 10px; font-size:0.75rem; background:rgba(255,255,255,0.2); border:1px solid white; color:white;">🏠 처음으로</button>
+        </div>
+
+        <div class="content">
+            <div id="loading-screen" style="text-align:center; padding-top:50px; color:#888;">
+                <p>📜 데이터를 불러오는 중...</p>
+            </div>
+
+            <div id="screen-main" class="hidden">
+                <div class="score-board">
+                    <div class="score-text">현재 점수: <span id="display-score">0</span>점</div>
+                    <div style="font-size:0.8rem; color:#666;">맞으면 +10 | 틀리면 -5</div>
+                </div>
+                <div id="wrong-study-area" class="hidden">
+                    <button class="btn-wrong" onclick="startWrongQuiz()">❌ 오답 다시 풀기 (<span id="wrong-count">0</span>)</button>
+                    <hr style="border:0; border-top:1px solid #eee; margin:15px 0;">
+                </div>
+                <p style="text-align:center; color:#888; font-size:0.85rem; margin-bottom:15px;">시대를 선택하여 학습을 시작하세요!</p>
+                <div id="category-buttons"></div>
+            </div>
+
+            <div id="screen-quiz" class="hidden">
+                <div id="quiz-title" style="font-size:0.8rem; color:var(--primary); font-weight:700; margin-bottom:5px;"></div>
+                <div id="question-text" style="font-weight:700; margin-bottom:15px; font-size:1.05rem; line-height:1.4;"></div>
+                <div id="choice-container"></div>
+                <div id="explanation-area" class="hidden">
+                    <div class="explanation-box" id="explanation-text"></div>
+                    <button class="btn-main" id="next-btn" onclick="showQuestion()">다음 문제로 ➡️</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vS85FYgWxBD0qHWTc1gX7dlUItO8p-MFoTOGtXXFtQjrg3cySjigK10C2ATzNUASrPNTfMt-0nQ9jju/pub?output=csv";
+
+        let allData = {};
+        let currentQuestions = [];
+        let currentIndex = 0;
+        let score = 0;
+        let wrongQuestions = []; // 오답 저장 배열
+        let isWrongMode = false;
+
+        function loadData() {
+            Papa.parse(SHEET_URL, {
+                download: true, header: true, skipEmptyLines: true,
+                complete: function(results) {
+                    allData = {};
+                    results.data.forEach(row => {
+                        const keys = Object.keys(row);
+                        const cat = row[keys[0]]?.trim();
+                        if (!cat || cat === "시대") return;
+                        if (!allData[cat]) allData[cat] = [];
+                        allData[cat].push({ q: row[keys[1]], a: [row[keys[2]], row[keys[3]], row[keys[4]], row[keys[5]]], c: row[keys[6]]?.trim(), ex: row[keys[7]] || "해설이 없습니다." });
+                    });
+                    renderMain();
+                }
+            });
+        }
+
+        function renderMain() {
+            isWrongMode = false;
+            document.getElementById('display-score').innerText = score;
+            document.getElementById('loading-screen').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-main').classList.remove('hidden');
+            
+            // 오답 버튼 표시 여부
+            const wrongArea = document.getElementById('wrong-study-area');
+            if (wrongQuestions.length > 0) {
+                wrongArea.classList.remove('hidden');
+                document.getElementById('wrong-count').innerText = wrongQuestions.length;
+            } else {
+                wrongArea.classList.add('hidden');
+            }
+
+            const container = document.getElementById('category-buttons');
+            container.innerHTML = "";
+            Object.keys(allData).forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = "btn-main";
+                btn.innerText = cat;
+                btn.onclick = () => startQuiz(cat);
+                container.appendChild(btn);
+            });
+        }
+
+        function startQuiz(cat) {
+            currentQuestions = [...allData[cat]].sort(() => Math.random() - 0.5);
+            currentIndex = 0;
+            document.getElementById('quiz-title').innerText = "📍 " + cat;
+            document.getElementById('screen-main').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+            showQuestion();
+        }
+
+        function startWrongQuiz() {
+            isWrongMode = true;
+            currentQuestions = [...wrongQuestions].sort(() => Math.random() - 0.5);
+            currentIndex = 0;
+            document.getElementById('quiz-title').innerText = "❌ 오답 집중 학습";
+            document.getElementById('screen-main').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+            showQuestion();
+        }
+
+        function showQuestion() {
+            if (currentIndex >= currentQuestions.length) {
+                alert(isWrongMode ? "오답 학습을 마쳤습니다!" : "모든 문제를 풀었습니다!");
+                renderMain();
+                return;
+            }
+            const qObj = currentQuestions[currentIndex];
+            document.getElementById('explanation-area').classList.add('hidden');
+            document.getElementById('question-text').innerText = "Q. " + qObj.q;
+            const container = document.getElementById('choice-container');
+            container.innerHTML = "";
+            qObj.a.forEach(choice => {
+                if(!choice) return;
+                const btn = document.createElement('button');
+                btn.className = "btn-choice";
+                btn.innerText = choice;
+                btn.onclick = () => checkAnswer(btn, choice, qObj);
+                container.appendChild(btn);
+            });
+        }
+
+        function checkAnswer(btn, selected, qObj) {
+            const btns = document.querySelectorAll('.btn-choice');
+            btns.forEach(b => b.disabled = true);
+            const isCorrect = selected.trim() === qObj.c.trim();
+
+            if (isCorrect) {
+                btn.style.background = "#c8e6c9";
+                score += 10;
+                // 오답 모드에서 맞췄으면 목록에서 제거
+                if(isWrongMode) {
+                    wrongQuestions = wrongQuestions.filter(item => item.q !== qObj.q);
+                }
+            } else {
+                btn.style.background = "#ffcdd2";
+                score = Math.max(0, score - 5);
+                // 오답 목록에 추가 (중복 방지)
+                if (!wrongQuestions.find(item => item.q === qObj.q)) {
+                    wrongQuestions.push(qObj);
+                }
+                btns.forEach(b => { if(b.innerText.trim() === qObj.c.trim()) b.style.border = "2px solid var(--success)"; });
+            }
+
+            document.getElementById('explanation-text').innerText = "💡 " + (isCorrect ? "정답입니다! " : "아쉽네요. ") + qObj.ex;
+            document.getElementById('explanation-area').classList.remove('hidden');
+            currentIndex++;
+        }
+
+        function goHome() {
+            if(confirm("메인 화면으로 돌아갈까요? (점수는 유지됩니다)")) {
+                renderMain();
+            }
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
