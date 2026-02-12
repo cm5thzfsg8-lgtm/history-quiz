@@ -1,0 +1,16 @@
+{
+  "name": "돼지쌤네 학교 한국사",
+  "short_name": "돼지쌤한국사",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fdf6e3",
+  "theme_color": "#FF9800",
+  "description": "돼지쌤과 함께하는 재미있는 한국사 퀴즈!",
+  "icons": [
+    {
+      "src": "icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
