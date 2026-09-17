@@ -1,38 +1,38 @@
 {
-  "name": "돼지쌤한국사",
+  "name": "돼지쌤네 학교 한국사",
   "short_name": "돼지쌤한국사",
-  "id": "com.pigteacher.history_quiz", // 고유 ID 추가
-  "description": "돼지쌤과 함께하는 재미있는 한국사 퀴즈!",
-  "lang": "ko",
+  "id": "com.pigteacher.history_quiz",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#FF9800",
   "theme_color": "#FF9800",
-  "orientation": "portrait", // 세로 모드 고정 추가
-  "categories": ["Education"], // 카테고리 추가
+  "orientation": "portrait",
+  "description": "돼지쌤과 함께하는 재미있는 한국사 퀴즈!",
+  "lang": "ko",
+  "categories": [
+    "education"
+  ],
   "icons": [
-    // 규격에 맞는 아이콘 정보 추가
     {
-      "src": "icon-192x192.png", // 업로드한 192x192 PNG 파일 이름
+      "src": "icon-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "icon-512x512.png", // 업로드한 512x512 PNG 파일 이름
+      "src": "icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
   ],
   "screenshots": [
-    // 스크린샷 정보 추가
     {
-      "src": "screenshot-1.png", // 업로드한 스크린샷 1 PNG 파일 이름
-      "sizes": "1080x1920", // 실제 스크린샷 파일 크기
+      "src": "screenshot-1.png",
+      "sizes": "1080x1920",
       "type": "image/png"
     },
     {
-      "src": "screenshot-2.png", // 업로드한 스크린샷 2 PNG 파일 이름
-      "sizes": "1080x1920", // 실제 스크린샷 파일 크기
+      "src": "screenshot-2.png",
+      "sizes": "1080x1920",
       "type": "image/png"
     }
   ]
